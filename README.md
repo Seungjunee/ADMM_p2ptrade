@@ -2,18 +2,15 @@
 
 ### About
 
-### Setup and use
+## Prerequisites
+To run this code you will need:
+* [MATLAB] (tested on 2019b or later)
+* [MATPOWER](https://matpower.org/download/) (tested on v7.0)
+* [Gurobi Optimizer](http://user.gurobi.com/download/gurobi-optimizer) (tested on v6.5.0, academic license)
 
-1. Before using the toolbox, it is necessary to download Matpower from http://www.pserc.cornell.edu/matpower/
+## Running
 
-2. In the file 'parameters.m', change the parameter 'matpower_path' to direct to the downloaded matpower folder (absolute or relative path).
-
-3. Change the other parameters in 'parameters.m' according to the system that you want to generate.
-
-4. Run 'main.m'
-
-5. Find the T&D system exported in the desired format in the folder 'output_data' 
-
+Run 'main.m'
 
 ### System requirements
 
