@@ -24,7 +24,7 @@ Zbus = inv(Ybus(2:end,2:end));    % VSFs
 
 const.activate_Linelimit = true;
 const.activate_Voltagelimit = true;
-const.activate_Loss = false; % notice : losses are not considered in centralized 
+const.activate_Loss = true; % notice : losses are not considered in centralized 
 
 const.Linelimit = [2.5*ones(1,5) 1.5*ones(1,2) 0.57*ones(1,25)]';
 const.Vmin = 0.95;
@@ -32,7 +32,7 @@ const.Vmax = 1.05;
 
 %% Augmented multiplier
 
-rho = 0.01;  % penalty factor
+rho = 0.02;  % penalty factor
 
 %% For fixed load(nonparticipate p2p energy trade)
 %--------------------------------------------------------------------------
@@ -47,7 +47,7 @@ V_fix = pfresult.bus(:,8);  % node voltage
 [agents, sellers, buyers] = market_info33(no, rho);   % market information
 [centralized_result] = centralized_trading(agents, sellers, buyers, mpc, const);   % centralized_optimization
 
-preference = zeros(length(sellers),length(buyers)); % no preferences
+preference = zeros(length(buyers),length(sellers)); % no preferences
 %--------------------------------------------------------------------------
 % ADMM trading process
 [ADMM.energy, ADMM.sellprice, ADMM.buyprice] = ADMM_trading(agents, sellers, buyers, mpc, const, rho, preference);  
@@ -73,10 +73,10 @@ ISF=makePTDF(mpc);  % injection shift factor (matpower package)
 ISF(:,1) = [];  % remove column index corresponding slack bus
 
 % market layer to physical layer mapping
-trade_physiclayer = agents.As*sum(ADMM.energy,2)-agents.Ab*sum(ADMM.energy,1)';
+trade_physiclayer = agents.As*sum(ADMM.energy,1)'-agents.Ab*sum(ADMM.energy,2);
 trade_physiclayer = trade_physiclayer/1e3; % unit conversion (kW to MW)
 
-trade_physiclayer_unreg = agents.As*sum(ADMM_unreg.energy,2)-agents.Ab*sum(ADMM_unreg.energy,1)';
+trade_physiclayer_unreg = agents.As*sum(ADMM_unreg.energy,1)'-agents.Ab*sum(ADMM_unreg.energy,2);
 trade_physiclayer_unreg = trade_physiclayer_unreg/1e3; % unit conversion (kW to MW)
 
 % Assess voltage and line flow
@@ -87,11 +87,11 @@ ADMM_unreg.VM = [1;V_fix(2:end)+real(Zbus)*(trade_physiclayer_unreg)/mpc.baseMVA
 ADMM_unreg.Pline = ISF*trade_physiclayer_unreg+Pline_fix;
 
 % Assess total trading energy amount
-ADMM.sell = sum(ADMM.energy,2);
-ADMM.buy = sum(ADMM.energy,1)';
+ADMM.sell = sum(ADMM.energy,1)';
+ADMM.buy = sum(ADMM.energy,2);
 
-ADMM_unreg.sell = sum(ADMM_unreg.energy,2);
-ADMM_unreg.buy = sum(ADMM_unreg.energy,1)';
+ADMM_unreg.sell = sum(ADMM_unreg.energy,1)';
+ADMM_unreg.buy = sum(ADMM_unreg.energy,2);
 
 DD.sell = sum(DD.energy,2);
 DD.buy = sum(DD.energy,1)';

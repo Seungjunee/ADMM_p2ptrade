@@ -150,17 +150,17 @@ G1 = addnode(diG,T.Nodes); % normal
 G2 = addnode(diG,T.Nodes); % positive
 G3 = addnode(diG,T.Nodes); % negative
 energy_graph = [];
-physics_energy = blkdiag(0,agents.As*ADMM.energy*agents.Ab');
-physics_price = blkdiag(0,agents.As*grid_price*agents.Ab');
-for i=1:no
-    for j=1:no
-        if physics_energy(i,j)~=0
-            if physics_price(i,j) > 1e-3
-                G2 = addedge(G2,i, j,physics_energy(i,j));
-            elseif physics_price(i,j) < -1e-3
-                G3 = addedge(G3,i, j,physics_energy(i,j));
+physics_energy = blkdiag(0,agents.Ab*ADMM.energy*agents.As');
+physics_price = blkdiag(0,agents.Ab*grid_price*agents.As');
+for j=1:no
+    for i=1:no
+        if physics_energy(j,i)~=0
+            if physics_price(j,i) > 1e-3
+                G2 = addedge(G2,i, j,physics_energy(j,i));
+            elseif physics_price(j,i) < -1e-3
+                G3 = addedge(G3,i, j,physics_energy(j,i));
             else
-                G1 = addedge(G1,i, j,physics_energy(i,j));
+                G1 = addedge(G1,i, j,physics_energy(j,i));
             end
         end
     end
@@ -172,15 +172,18 @@ p1.ArrowSize = 10;
 end
 if ~isempty(G2.Edges)
 G2LWidths =G2.Edges.Weight/8;
-p2 = plot(G2,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[0.07, 0.62, 1],'LineWidth',G2LWidths);
+p2 = plot(G2,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[0.3, 0.75, 1],'LineWidth',G2LWidths);
 p2.ArrowSize = 10;
 end
 if ~isempty(G3.Edges)
 G3LWidths =G3.Edges.Weight/8;
-p3 = plot(G3,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[1, 0, 0],'LineWidth',G3LWidths);
+p3 = plot(G3,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[1, 0.75, 0],'LineWidth',G3LWidths);
 p3.ArrowSize = 10;
 end
 p3.NodeColor = 'k';
+% highlight(p3,[sellers.bus],'NodeColor',[70 114 196]/255)
+% highlight(p3,[buyers.bus],'NodeColor',[237 125 49]/255)
+
 p.NodeLabel = {};
 p1.NodeLabel = {};
 p2.NodeLabel = {};
