@@ -64,7 +64,7 @@ for round=1:1
     zglob_prev = 0;
     pos_seq = 1;
 
-    while (epsilon_pri > 1e-3) || (epsilon_dual > 1e-2) || (k<10)
+    while (epsilon_pri > 1e-2) || (epsilon_dual > 1e-2) || (k<10)
         xi_lambda = 0.01/(k^0.009);
         pos_seq = 1/(k^0.01);
         

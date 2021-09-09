@@ -28,8 +28,8 @@ Es = zeros(length(buyers),length(sellers));
 Eb = zeros(length(buyers),length(sellers));
 zglob = zeros(length(buyers),length(sellers));
 Eaverage = zeros(length(buyers),length(sellers));
-Lambda_b = zeros(length(sellers),length(buyers));
-Lambda_s = zeros(length(sellers),length(buyers));
+Lambda_b = zeros(length(buyers),length(sellers));
+Lambda_s = zeros(length(buyers),length(sellers));
 
 fd_low = zeros(length(br),1);
 fd_upp = zeros(length(br),1);
@@ -78,16 +78,8 @@ end
 LSF = 2*((alpha*(-pfresult.bus(2:end,3))-beta*(-pfresult.bus(2:end,4))))/mpc.baseMVA;
 
 MLSFji = LSF'*agents.As - (LSF'*agents.Ab)';
-cij_vec = [];
-for i=1:length(sellers)
-    for j=1:length(sellers(i).partner)
-        if MLSFji(j,i) > 0 %
-            cij_vec = [cij_vec; 4*MLSFji(j,i)];
-        else
-            cij_vec = [cij_vec; 4*MLSFji(j,i)];
-        end
-    end
-end
+cij_vec = 8*MLSFji(incidence);
+
 if const.activate_Loss == false % if not activate loss, set to zeros
     cij_vec = zeros(size(cij_vec));
 end
@@ -119,7 +111,7 @@ for round=1:1
     pifl = zeros(tradelen,1);
     pivb = zeros(tradelen,1);
     
-    while (epsilon_pri > 1e-4) || (epsilon_dual > 1e-3)
+    while (epsilon_pri > 1e-4) || (epsilon_dual > 1e-4)
         % local variable (amount) update for sellers
         for i=1:length(sellers)
             lambdas = Lambda_s(sellers(i).partner,i)';
@@ -157,9 +149,9 @@ for round=1:1
                 pivb = MarketMVSC'*vd_upp-MarketMVSC'*vd_low;
             end
             model.obj = -2*Eaverage_vec+(-2*Lambda_barvec+cij_vec)./rho;
-                        results = gurobi(model, params);
-                        z = results.x;
-%             z = ehat;
+            results = gurobi(model, params);
+            z = results.x;
+            %             z = ehat;
             zglob(incidence) = z;
         elseif const.activate_Loss == true
             ehat = Eaverage_vec+(Lambda_barvec-cij_vec/2)./rho;
@@ -187,7 +179,7 @@ for round=1:1
         hist(k).dual = epsilon_dual;
         k=k+1;
     end
-%     ADMM_graph_result(hist, k, MLSFji)
+        ADMM_graph_result(hist, k, MLSFji)
     % derive utility of overall market players
     utility = 0;
     utility = 0;

@@ -8,8 +8,8 @@ set(0, 'DefaultAxesFontName', 'Times');
 mpc = loadcase('case33re');
 
 %  Active and reactive loads in the retail market: 60% loads in [Baren. Wu.]
-mpc.bus(:,3) = mpc.bus(:,3)*0.6; % active power
-mpc.bus(:,4) = mpc.bus(:,4)*0.6; % reactive power
+mpc.bus(:,3) = mpc.bus(:,3)*1; % active power
+mpc.bus(:,4) = mpc.bus(:,4)*0; % reactive power
 
 no = length(mpc.bus);   % # of nodes
 br = length(mpc.branch);    % # of branch
@@ -23,10 +23,10 @@ Zbus = inv(Ybus(2:end,2:end));    % VSFs
 %% network constraints-----change it! true or false
 
 const.activate_Linelimit = true;
-const.activate_Voltagelimit = true;
-const.activate_Loss = true; % notice : losses are not considered in centralized 
+const.activate_Voltagelimit = false;
+const.activate_Loss = false; % notice : losses are not considered in centralized 
 
-const.Linelimit = [2.5*ones(1,5) 1.5*ones(1,2) 0.57*ones(1,25)]';
+const.Linelimit = [4*ones(1,5) 4*ones(1,6) 1.0*ones(1,21)]';
 const.Vmin = 0.95;
 const.Vmax = 1.05;
 
@@ -44,16 +44,17 @@ Qline_fix = pfresult.branch(:,15);  % reactive power flows
 V_fix = pfresult.bus(:,8);  % node voltage
 
 %% Agent environment
-[agents, sellers, buyers] = market_info33(no, rho);   % market information
+[agents, sellers, buyers] = market_info33_new(no, rho);   % market information
+% [agents, sellers, buyers] = khorasany(no, rho);   % market information
 [centralized_result] = centralized_trading(agents, sellers, buyers, mpc, const);   % centralized_optimization
 
 preference = zeros(length(buyers),length(sellers)); % no preferences
 %--------------------------------------------------------------------------
-% ADMM trading process
+% ADMM trading process (custom setting)
 [ADMM.energy, ADMM.sellprice, ADMM.buyprice] = ADMM_trading(agents, sellers, buyers, mpc, const, rho, preference);  
 
 % first-order gradient method
-[DD.energy, DD.price, DD.LUP] = first_order_trading(sellers, buyers, mpc, const);  
+% [DD.energy, DD.price, DD.LUP] = first_order_trading(sellers, buyers, mpc, const);  
 
 % ADMM trading process (unregulated)
 const.activate_Linelimit = false;
@@ -62,12 +63,12 @@ const.activate_Loss = false;
 [ADMM_unreg.energy, ADMM_unreg.sellprice, ADMM_unreg.buyprice] = ADMM_trading(agents, sellers, buyers, mpc, const, rho, preference);
 
 % ADMM trading process (with preference)
-prefernece = rand(length(sellers),length(buyers)); % 0 to 1 cent preference
-prefernece(:,[3,5]) = 0; % buyer 3, 5 has no preferences
+preference = 1*rand(length(sellers),length(buyers)); % 0 to 1 cent preference
+% preference = zeros(length(buyers),length(sellers)); % no preferences
 const.activate_Linelimit = true;
 const.activate_Voltagelimit = true;
 const.activate_Loss = true;
-[ADMM_pref.energy, ADMM_pref.sellprice, ADMM_pref.buyprice] = ADMM_trading(agents, sellers, buyers, mpc, const, rho, prefernece);
+[ADMM_pref.energy, ADMM_pref.sellprice, ADMM_pref.buyprice] = ADMM_trading(agents, sellers, buyers, mpc, const, rho, preference);
 
 ISF=makePTDF(mpc);  % injection shift factor (matpower package)
 ISF(:,1) = [];  % remove column index corresponding slack bus
@@ -80,10 +81,10 @@ trade_physiclayer_unreg = agents.As*sum(ADMM_unreg.energy,1)'-agents.Ab*sum(ADMM
 trade_physiclayer_unreg = trade_physiclayer_unreg/1e3; % unit conversion (kW to MW)
 
 % Assess voltage and line flow
-ADMM.VM = [1;V_fix(2:end)+real(Zbus)*(trade_physiclayer)/mpc.baseMVA];
+ADMM.VM = [mpc.gen(1,6);V_fix(2:end)+real(Zbus)*(trade_physiclayer)/mpc.baseMVA];
 ADMM.Pline = ISF*(trade_physiclayer)+Pline_fix;
 
-ADMM_unreg.VM = [1;V_fix(2:end)+real(Zbus)*(trade_physiclayer_unreg)/mpc.baseMVA];
+ADMM_unreg.VM = [mpc.gen(1,6);V_fix(2:end)+real(Zbus)*(trade_physiclayer_unreg)/mpc.baseMVA];
 ADMM_unreg.Pline = ISF*trade_physiclayer_unreg+Pline_fix;
 
 % Assess total trading energy amount
@@ -93,8 +94,8 @@ ADMM.buy = sum(ADMM.energy,2);
 ADMM_unreg.sell = sum(ADMM_unreg.energy,1)';
 ADMM_unreg.buy = sum(ADMM_unreg.energy,2);
 
-DD.sell = sum(DD.energy,2);
-DD.buy = sum(DD.energy,1)';
+% DD.sell = sum(DD.energy,2);
+% DD.buy = sum(DD.energy,1)';
 
 main_result_graph(T, no, br, agents, sellers, buyers, ADMM, ADMM_unreg, ADMM_pref, centralized_result, mpc, const, preference);
 

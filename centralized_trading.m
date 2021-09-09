@@ -8,13 +8,25 @@ br = length(mpc.branch);
 Ybus = makeYbus(mpc.baseMVA, mpc.bus, mpc.branch); % make Ybus
 Zbus = inv(Ybus(2:no,2:no))';
 
+pfresult = runpf(mpc,mpoption('verbose',0,'out.all',0));
+VM = pfresult.bus(2:end,8); % except slack bus
+VA = pfresult.bus(2:end,9)*pi/180;
+alpha = zeros(no-1,no-1);
+beta = zeros(no-1,no-1);
+for i = 1:no-1
+    for j = 1:no-1
+        alpha(i,j) = real(Zbus(i,j))/(VM(i)*VM(j))*cos(VA(i)-VA(j));
+        beta(i,j) = real(Zbus(i,j))/(VM(i)*VM(j))*sin(VA(i)-VA(j));
+    end
+end
+LSF = 2*((alpha*(-pfresult.bus(2:end,3))-beta*(-pfresult.bus(2:end,4))))/mpc.baseMVA;
+
 %% Optimal Power Flow problem
 %--------------------------------------------------------------------------
 incidence = zeros(length(sellers),length(buyers));
 for i = 1:length(sellers)
     incidence(i,sellers(i).partner)=1;
 end
-
 [f, qf, A, b, Aeq, beq, ub, lb] = deal([]); % initialization
 
 pos.sell_trade = [0,size(sellers,2)];
@@ -39,6 +51,15 @@ end
 for j=1:size(buyers,2)
     f(pos.buy_trade(1)+j) = -buyers(j).coeff.B;
 end
+if const.activate_Loss == true
+for i=1:size(sellers,2)
+    f(pos.sell_trade(1)+i) = f(pos.sell_trade(1)+i)+8*LSF(sellers(i).bus-1);
+end
+for j=1:size(buyers,2)
+    f(pos.buy_trade(1)+j) = f(pos.buy_trade(1)+j)-8*LSF(buyers(j).bus-1);
+end
+end
+
 % for pool based balance constraint
 
 for i=1:size(sellers,2)
@@ -118,12 +139,23 @@ if const.activate_Voltagelimit == true
     A = [A; Voltageconst; -Voltageconst];
     b = [b; V_fix(2:end)-const.Vmin*ones(no-1,1);const.Vmax*ones(no-1,1)-V_fix(2:end)];
 end
-%% OPF process...
-[x,fval,exitflag,output,lambda] = quadprog(diag(qf)*2,f,A,b,Aeq,beq,lb,ub); % quadratic term 1/2 in process
+%% OPF process with Gurobi
+model.Q = sparse(diag(qf));
+model.A = sparse([A;Aeq]);
+model.rhs = [b;beq];
+model.sense = [repmat('<',size(A,1),1); repmat('=',size(Aeq,1),1)];
+params.outputflag = 0;
+model.obj = f;
+model.lb = lb;
+model.ub = ub;
+
+results = gurobi(model, params);
+% [x,fval,exitflag,output,lambda] = quadprog(diag(qf)*2,f,A,b,Aeq,beq,lb,ub); % quadratic term 1/2 in process
+x=results.x;
 central.selltrade = x(pos.sell_trade(1)+1:pos.sell_trade(end));
 central.buytrade = x(pos.buy_trade(1)+1:pos.buy_trade(end));
-central.sellprice = lambda.eqlin;
-central.buyprice = lambda.eqlin;
+central.sellprice = results.pi(size(A,1)+(1:length(sellers)));
+central.buyprice = results.pi(size(A,1)+length(sellers)+1:end);
 
 Trade_map = agents.As*central.selltrade-agents.Ab*central.buytrade;
 Trade_map = Trade_map/1000;

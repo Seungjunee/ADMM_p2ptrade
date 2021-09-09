@@ -7,13 +7,15 @@ plot(1:br,abs(ADMM_unreg.Pline),'--','LineWidth',2,'color',[0 0.2 0.5]);
 stairs(1:br,const.Linelimit,'--','LineWidth',2,'color',[1 0 0]);
 hold off
 xlabel('branch index')
-ylabel('Line power(MW)')
-legend({'w/ regulation','w/o regulation','line power limit'})
-ylim([0 2.5])
+ylabel('Line power [MW]')
+legend({'w/ regulation','w/o regulation','line power limits'})
+ylim([0 5])
 xlim([1 br])
-set(gca,'FontSize',24)
-set(f1,'Position',[0 0 1000 500])
+yticks([0 1 2 3 4 5])
+set(gca,'fontweight','bold','FontSize',20)
+set(f1,'Position',[0 0 1000 300])
 grid on
+set(gca,'Gridcolor',[0.9 0.9 0.9],'GridAlpha',1)
 
 f2 = figure(2);
 plot(1:no,ADMM.VM,'-','LineWidth',2,'color',[0 0 0]);
@@ -22,46 +24,41 @@ plot(1:no,ADMM_unreg.VM,'--','LineWidth',2,'color',[0 0 0]);
 plot(1:no,const.Vmin*ones(no,1),'--','LineWidth',2,'color',[1 0 0]);
 hold off
 xlabel('bus index')
-ylabel('Voltage magnitude (p.u.)')
-legend({'w/ regulation','w/o regulation','voltage limit'})
+ylabel('Voltage [p.u.]')
+legend({'w/ regulation','w/o regulation','voltage limits'})
 xlim([1 no])
-ylim([0.94 1.01])
-yticks([0.94 0.95 0.96 0.97 0.98 0.99 1.00 1.01])
-set(gca,'FontSize',24)
-set(f2,'Position',[0 0 1000 500])
+ylim([0.93 1.07])
+yticks([0.93 0.95 1.00 1.05 1.07])
+% yticks([0.95 1.00 1.05])
+set(gca,'fontweight','bold','FontSize',20)
+set(f2,'Position',[0 0 1000 300])
 grid on
+set(gca,'Gridcolor',[0.9 0.9 0.9],'GridAlpha',1)
 
 figure(3)
 bar(1:agents.no,[[centralized_result.selltrade; centralized_result.buytrade], [ADMM.sell; ADMM.buy]]);
 xlabel('agent index','FontSize',12)
 ylabel('Net trade power [kW]','FontSize',12)
 legend({'centralized','ADMM w/ reg.'})
-ylim([0 200])
 set(gca,'FontSize',16)
 
 figure(4) % except retailer
-agent_idx = 4;
+buyer_idx = 1;
 % target_idx = find(ADMM_pref.energy(1:end,agent_idx)>1e-3)';
-target_idx = buyers(agent_idx).partner;
+target_idx = buyers(buyer_idx).partner;
 aH = axes;
-system_fee = [zeros(length(target_idx),2),min(ADMM_pref.sellprice(target_idx,agent_idx),ADMM_pref.buyprice(target_idx,agent_idx))];
-homogeneous_price = [zeros(length(target_idx),1),...
-    ADMM_pref.buyprice(target_idx,agent_idx)-preference(target_idx,agent_idx),zeros(length(target_idx),1)];
-maximum = [ADMM_pref.sellprice(target_idx,agent_idx), ADMM_pref.buyprice(target_idx,agent_idx),...
-           max(ADMM_pref.sellprice(target_idx,agent_idx),ADMM_pref.buyprice(target_idx,agent_idx))];
+aH.GridAlpha=1;
+aH.GridColor=[0.8 0.8 0.8];
+system_fee = [zeros(length(target_idx),2),min(ADMM_pref.sellprice(buyer_idx,target_idx)',ADMM_pref.buyprice(buyer_idx,target_idx)')];
+maximum = [ADMM_pref.sellprice(buyer_idx,target_idx)', ADMM_pref.buyprice(buyer_idx,target_idx)',...
+           max(ADMM_pref.sellprice(buyer_idx,target_idx)',ADMM_pref.buyprice(buyer_idx,target_idx)')];
 bH = bar(maximum);
 bH(1).FaceColor = [0 0.4 0.8];
 bH(2).FaceColor = [1 0.5 0];
 bH(3).FaceColor = [1 0.23 0.23];
 hold on;
 bH1 = bar(system_fee);
-bH2 = bar(homogeneous_price);
-% bH1(3).Visible = 'off';
-for ii = bH2
-    ii.FaceColor = [0.6 0.45 0.2];
-    ii.LineStyle = 'None';
-    ii.EdgeColor = [0.6 0.45 0.2];
-end
+bH1(3).BarWidth = 1.2;
 for ii = bH1
     ii.FaceColor = [1 1 1];
     ii.LineStyle = 'None';
@@ -71,42 +68,39 @@ for ii = bH
     ii.LineStyle = 'None';
     ii.EdgeColor = [1 1 1];
 end
+p4 = scatter((1:length(target_idx))+0.225,(ADMM_pref.sellprice(buyer_idx,target_idx)'+ADMM_pref.buyprice(buyer_idx,target_idx)')/2,'k*');
 hold off
 xlabel('seller index','FontSize',12)
-ylabel("Buyer 4's price ("+char(0162)+"/kWh)",'FontSize',12)
-leg1 = legend([bH, bH2(2)],{'$\lambda^s_{ij}$', "$c_{ij}$", '2$\bar{\lambda}_{ij}$', '$\mu^b_{j}$'});
-set(leg1,'Interpreter','latex','FontSize',16)
-set(gca,'FontSize',20)
-set(gca,'xticklabel',target_idx-1)
+ylabel("Buyer 1's price ["+char(0162)+"/kWh]",'FontSize',12)
+leg1 = legend([bH,p4],{'$\lambda^s_{ij}$','$\lambda^b_{ij}$','2$\tilde{\lambda}_{ij}$','$\bar{\lambda}_{ij}$'});
+set(leg1,'Interpreter','latex','FontSize',20,'fontweight','bold')
+set(gca,'FontSize',20,'fontweight','bold')
+set(gca,'xticklabel',target_idx)
 ylim([0 10])
 grid on
+set(gca,'Gridcolor',[0.9 0.9 0.9],'GridAlpha',1)
 
 figure(44) % except retailer
-agent_idx = 3+1;
-target_idx = buyers(agent_idx).partner;
+buyer_idx = 1;
+% target_idx = find(ADMM_pref.energy(1:end,agent_idx)>1e-3)';
+target_idx = buyers(buyer_idx).partner;
 aH = axes;
-system_fee = [zeros(length(target_idx),2),min(ADMM_pref.sellprice(target_idx,agent_idx),ADMM_pref.buyprice(target_idx,agent_idx))];
-homogeneous_price = [zeros(length(target_idx),1),...
-    ADMM_pref.buyprice(target_idx,agent_idx)-preference(target_idx,agent_idx),zeros(length(target_idx),1)];
-maximum = [ADMM_pref.sellprice(target_idx,agent_idx), ADMM_pref.buyprice(target_idx,agent_idx),...
-           max(ADMM_pref.sellprice(target_idx,agent_idx),ADMM_pref.buyprice(target_idx,agent_idx))];
-bH = bar(maximum);
-bH(1).FaceColor = [0 0.4 0.8];
-bH(2).FaceColor = [1 0.5 0];
-bH(3).FaceColor = [1 0.23 0.23];
+homogeneous_price = [zeros(length(target_idx),1),ADMM_pref.buyprice(buyer_idx,target_idx)'-preference(buyer_idx,target_idx)'];
+maximum = [ADMM_pref.sellprice(buyer_idx,target_idx)', ADMM_pref.buyprice(buyer_idx,target_idx)'];
+plot([0:6],ones(1,7)*mean(ADMM_pref.buyprice(buyer_idx,target_idx)-preference(buyer_idx,target_idx)),'--r')
 hold on;
-bH1 = bar(system_fee);
+bH = bar(maximum);
+bH(1).BarWidth = 0.6;
+bH(2).BarWidth = 0.6;
+bH(1).FaceColor = [0 0.4 0.8];
+bH(2).FaceColor = [1 0.75 0.05];
 bH2 = bar(homogeneous_price);
-% bH1(3).Visible = 'off';
+bH2(1).BarWidth = 0.6;
+bH2(1).BarWidth = 0.6;
 for ii = bH2
-    ii.FaceColor = [0.6 0.45 0.2];
+    ii.FaceColor = [0.785 0.4 0.05];
     ii.LineStyle = 'None';
-    ii.EdgeColor = [0.6 0.45 0.2];
-end
-for ii = bH1
-    ii.FaceColor = [1 1 1];
-    ii.LineStyle = 'None';
-    ii.EdgeColor = [1 1 1];
+    ii.EdgeColor = [0.785 0.4 0.05];
 end
 for ii = bH
     ii.LineStyle = 'None';
@@ -114,18 +108,19 @@ for ii = bH
 end
 hold off
 xlabel('seller index','FontSize',12)
-ylabel("Buyer 3's price ("+char(0162)+"/kWh)",'FontSize',12)
-leg1 = legend([bH, bH2(2)],{'$\lambda^s_{ij}$', "$c_{ij}$", '2$\bar{\lambda}_{ij}$', '$\mu^b_{j}$'});
-set(leg1,'Interpreter','latex','FontSize',16)
-set(gca,'FontSize',20)
-set(gca,'xticklabel',target_idx-1)
+ylabel("Buyer 1's price ["+char(0162)+"/kWh]",'FontSize',12)
+leg1 = legend([bH, bH2(2)],{'$\lambda^s_{ij}$', "$\kappa_{ij}$",'$\mu^b_{j}$'});
+set(leg1,'Interpreter','latex','FontSize',20,'fontweight','bold')
+set(gca,'FontSize',20,'fontweight','bold')
+set(gca,'xticklabel',target_idx)
 ylim([0 10])
+xlim([0.5 4.5])
 grid on
-
+set(gca,'Gridcolor',[0.9 0.9 0.9],'GridAlpha',1)
 
 figure(5) % net trade power seller & buyer
 subplot(1,2,1)
-bar(1:length(sellers)-1,[centralized_result.selltrade(2:end),ADMM.sell(2:end)]);
+bar(1:length(sellers),[centralized_result.selltrade,ADMM.sell]);
 xlabel('seller index')
 ylabel('Trade energy[kW]')
 ylim([0 200])
@@ -133,7 +128,7 @@ legend({'ADMM','centralized'})
 set(gca,'FontSize',16)
 
 subplot(1,2,2)
-bar(1:length(buyers)-1,[centralized_result.buytrade(2:end),ADMM.buy(2:end)]);
+bar(1:length(buyers),[centralized_result.buytrade,ADMM.buy]);
 xlabel('buyer index')
 legend({'ADMM','centralized'})
 ylim([0 200])
@@ -143,7 +138,7 @@ f6 = figure(6);
 
 ADMM.energy(ADMM.energy<1e-2) = 0; % invisible line for less than 10W
 grid_price = ADMM.buyprice-ADMM.sellprice;
-p=plot(T,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'NodeColor','k','EdgeColor','k','LineWidth',1);
+p=plot(T,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'NodeColor','k','EdgeColor','k','LineWidth',1,'EdgeAlpha',1);
 hold on
 diG = digraph; 
 G1 = addnode(diG,T.Nodes); % normal
@@ -166,23 +161,24 @@ for j=1:no
     end
 end
 if ~isempty(G1.Edges)
-G1LWidths =G1.Edges.Weight/8;
+G1LWidths =G1.Edges.Weight/12;
 p1 = plot(G1,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[0.5, 0.5, 0.5],'LineWidth',G1LWidths);
 p1.ArrowSize = 10;
 end
 if ~isempty(G2.Edges)
-G2LWidths =G2.Edges.Weight/8;
+G2LWidths =G2.Edges.Weight/12;
 p2 = plot(G2,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[0.3, 0.75, 1],'LineWidth',G2LWidths);
 p2.ArrowSize = 10;
 end
 if ~isempty(G3.Edges)
-G3LWidths =G3.Edges.Weight/8;
+G3LWidths =G3.Edges.Weight/12;
 p3 = plot(G3,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[1, 0.75, 0],'LineWidth',G3LWidths);
+% ,'EdgeAlpha',1
 p3.ArrowSize = 10;
 end
 p3.NodeColor = 'k';
-% highlight(p3,[sellers.bus],'NodeColor',[70 114 196]/255)
-% highlight(p3,[buyers.bus],'NodeColor',[237 125 49]/255)
+highlight(p3,[sellers.bus],'NodeColor',[70 114 196]/255)
+highlight(p3,[buyers.bus],'NodeColor',[237 125 49]/255)
 
 p.NodeLabel = {};
 p1.NodeLabel = {};
