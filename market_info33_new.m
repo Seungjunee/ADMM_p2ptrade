@@ -2,10 +2,10 @@ function [agent, seller,buyer] = market_info33_new(no, rho)
 % agent description
 sellDATA = [
     %  idx bus gen coeffA coeffB genmax
-    1   18  0  0.0058  4.34 580
-    2   22  0  0.0038  3.67 300
-    3   25  0  0.0027  3.89 200
-    4   29  0  0.0034  5.03 200
+    1   18  0  0.0058  4.34 220
+    2   22  0  0.0038  3.67 260
+    3   25  0  0.0027  3.89 180
+    4   29  0  0.0034  5.03 240
     5   33  0  0.0040  4.75 160];
 
 buyDATA = [
@@ -13,11 +13,11 @@ buyDATA = [
     1   14  0 0.0024  5.89 100
     2   20   0  0.0042  5.07 180
     3   23   0 0.0031  4.99 180
-    4   27   0 0.0021  6.54 300
-    5   31   0 0.0018  6.38 300];
+    4   27   0 0.0021  6.54 260
+    5   31   0 0.0018  6.38 240];
 % a < b/(2*loadmax)
 %% struct buyer
-buyer(1) = Buyer([1,2,4,5], buyDATA(1,:), rho);
+buyer(1) = Buyer([1,2,4], buyDATA(1,:), rho);
 buyer(2) = Buyer([1,2,5], buyDATA(2,:), rho);
 buyer(3) = Buyer([3,4], buyDATA(3,:), rho);
 buyer(4) = Buyer([2,3,4], buyDATA(4,:), rho);

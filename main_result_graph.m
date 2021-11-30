@@ -6,32 +6,35 @@ hold on
 plot(1:br,abs(ADMM_unreg.Pline),'--','LineWidth',2,'color',[0 0.2 0.5]);
 stairs(1:br,const.Linelimit,'--','LineWidth',2,'color',[1 0 0]);
 hold off
-xlabel('branch index')
-ylabel('Line power [MW]')
-legend({'w/ regulation','w/o regulation','line power limits'})
+xlabel('Line Index')
+ylabel('Line power (MW)')
+legend({'With Regularization','Without Regularization','Line Power Limits'})
 ylim([0 5])
-xlim([1 br])
+xlim([0 32])
+xticks(0:4:32)
 yticks([0 1 2 3 4 5])
-set(gca,'fontweight','bold','FontSize',20)
-set(f1,'Position',[0 0 1000 300])
+set(gca,'FontSize',20)
+set(f1,'Position',[0 0 1000 350])
 grid on
 set(gca,'Gridcolor',[0.9 0.9 0.9],'GridAlpha',1)
 
 f2 = figure(2);
-plot(1:no,ADMM.VM,'-','LineWidth',2,'color',[0 0 0]);
+plot(0:no-1,ADMM.VM,'-','LineWidth',2,'color',[0 0 0]);
 hold on
-plot(1:no,ADMM_unreg.VM,'--','LineWidth',2,'color',[0 0 0]);
-plot(1:no,const.Vmin*ones(no,1),'--','LineWidth',2,'color',[1 0 0]);
+plot(0:no-1,ADMM_unreg.VM,'--','LineWidth',2,'color',[0 0 0]);
+plot(0:no-1,const.Vmin*ones(no,1),'--','LineWidth',2,'color',[1 0 0]);
+plot(0:no-1,const.Vmax*ones(no,1),'--','LineWidth',2,'color',[1 0 0]);
 hold off
-xlabel('bus index')
-ylabel('Voltage [p.u.]')
-legend({'w/ regulation','w/o regulation','voltage limits'})
-xlim([1 no])
-ylim([0.93 1.07])
-yticks([0.93 0.95 1.00 1.05 1.07])
+xlabel('Node Index')
+ylabel('Voltage (p.u.)')
+legend({'With Regularization','Without Regularization','Voltage Limits'})
+xlim([0 32])
+ylim([0.92 1.08])
+xticks(0:4:32)
+yticks([0.92 0.96 1.00 1.04 1.08])
 % yticks([0.95 1.00 1.05])
-set(gca,'fontweight','bold','FontSize',20)
-set(f2,'Position',[0 0 1000 300])
+set(gca,'FontSize',20)
+set(f2,'Position',[0 0 1000 350])
 grid on
 set(gca,'Gridcolor',[0.9 0.9 0.9],'GridAlpha',1)
 
@@ -43,7 +46,7 @@ legend({'centralized','ADMM w/ reg.'})
 set(gca,'FontSize',16)
 
 figure(4) % except retailer
-buyer_idx = 1;
+buyer_idx = 4;
 % target_idx = find(ADMM_pref.energy(1:end,agent_idx)>1e-3)';
 target_idx = buyers(buyer_idx).partner;
 aH = axes;
@@ -68,39 +71,40 @@ for ii = bH
     ii.LineStyle = 'None';
     ii.EdgeColor = [1 1 1];
 end
-p4 = scatter((1:length(target_idx))+0.225,(ADMM_pref.sellprice(buyer_idx,target_idx)'+ADMM_pref.buyprice(buyer_idx,target_idx)')/2,'k*');
+p4 = scatter((1:length(target_idx))+0.225,(ADMM_pref.sellprice(buyer_idx,target_idx)'+ADMM_pref.buyprice(buyer_idx,target_idx)')/2,100,'k*');
 hold off
 xlabel('seller index','FontSize',12)
-ylabel("Buyer 1's price ["+char(0162)+"/kWh]",'FontSize',12)
+ylabel("Buyer 4's price ("+char(0162)+"/kWh)",'FontSize',12)
 leg1 = legend([bH,p4],{'$\lambda^s_{ij}$','$\lambda^b_{ij}$','2$\tilde{\lambda}_{ij}$','$\bar{\lambda}_{ij}$'});
-set(leg1,'Interpreter','latex','FontSize',20,'fontweight','bold')
-set(gca,'FontSize',20,'fontweight','bold')
+set(leg1,'Interpreter','latex','FontSize',24)
+set(gca,'FontSize',24)
 set(gca,'xticklabel',target_idx)
 ylim([0 10])
+yticks([0 2 4 6 8 10])
 grid on
 set(gca,'Gridcolor',[0.9 0.9 0.9],'GridAlpha',1)
 
-figure(44) % except retailer
-buyer_idx = 1;
+figure(45) % except retailer
+buyer_idx = 4;
 % target_idx = find(ADMM_pref.energy(1:end,agent_idx)>1e-3)';
 target_idx = buyers(buyer_idx).partner;
 aH = axes;
-homogeneous_price = [zeros(length(target_idx),1),ADMM_pref.buyprice(buyer_idx,target_idx)'-preference(buyer_idx,target_idx)'];
-maximum = [ADMM_pref.sellprice(buyer_idx,target_idx)', ADMM_pref.buyprice(buyer_idx,target_idx)'];
-plot([0:6],ones(1,7)*mean(ADMM_pref.buyprice(buyer_idx,target_idx)-preference(buyer_idx,target_idx)),'--r')
-hold on;
+aH.GridAlpha=1;
+aH.GridColor=[0.8 0.8 0.8];
+system_fee = [zeros(length(target_idx),2),ADMM_pref.buyprice(buyer_idx,target_idx)'-preference(buyer_idx,target_idx)'];
+maximum = [ADMM_pref.sellprice(buyer_idx,target_idx)', ADMM_pref.buyprice(buyer_idx,target_idx)',...
+           ADMM_pref.buyprice(buyer_idx,target_idx)'];
 bH = bar(maximum);
-bH(1).BarWidth = 0.6;
-bH(2).BarWidth = 0.6;
 bH(1).FaceColor = [0 0.4 0.8];
-bH(2).FaceColor = [1 0.75 0.05];
-bH2 = bar(homogeneous_price);
-bH2(1).BarWidth = 0.6;
-bH2(1).BarWidth = 0.6;
-for ii = bH2
-    ii.FaceColor = [0.785 0.4 0.05];
+bH(2).FaceColor = [1 0.5 0];
+bH(3).FaceColor = [1 0.23 0.23];
+hold on;
+bH1 = bar(system_fee);
+bH1(3).BarWidth = 1.2;
+for ii = bH1
+    ii.FaceColor = [1 1 1];
     ii.LineStyle = 'None';
-    ii.EdgeColor = [0.785 0.4 0.05];
+    ii.EdgeColor = [1 1 1];
 end
 for ii = bH
     ii.LineStyle = 'None';
@@ -108,13 +112,52 @@ for ii = bH
 end
 hold off
 xlabel('seller index','FontSize',12)
-ylabel("Buyer 1's price ["+char(0162)+"/kWh]",'FontSize',12)
-leg1 = legend([bH, bH2(2)],{'$\lambda^s_{ij}$', "$\kappa_{ij}$",'$\mu^b_{j}$'});
-set(leg1,'Interpreter','latex','FontSize',20,'fontweight','bold')
-set(gca,'FontSize',20,'fontweight','bold')
-set(gca,'xticklabel',target_idx)
+ylabel("Buyer 4's price ("+char(0162)+"/kWh)",'FontSize',12)
 ylim([0 10])
-xlim([0.5 4.5])
+leg1 = legend([bH],{'$\lambda^s_{ij}$','$\lambda^b_{ij}$','$u_{ij}$'});
+set(leg1,'Interpreter','latex','FontSize',24)
+set(gca,'FontSize',24)
+set(gca,'xticklabel',target_idx)
+yticks([0 2 4 6 8 10])
+grid on
+set(gca,'Gridcolor',[0.9 0.9 0.9],'GridAlpha',1)
+
+
+
+figure(44) % except retailer
+buyer_idx = 4;
+% target_idx = find(ADMM_pref.energy(1:end,agent_idx)>1e-3)';
+target_idx = buyers(buyer_idx).partner;
+aH = axes;
+homogeneous_price = [zeros(length(target_idx),1),ADMM_pref.buyprice(buyer_idx,target_idx)'-preference(buyer_idx,target_idx)'];
+maximum = [ADMM_pref.sellprice(buyer_idx,target_idx)', ADMM_pref.buyprice(buyer_idx,target_idx)'];
+plot([0:5],ones(1,6)*mean(ADMM_pref.buyprice(buyer_idx,target_idx)-preference(buyer_idx,target_idx)),'--k')
+hold on;
+bH = bar(target_idx,maximum);
+bH(1).BarWidth = 0.6;
+bH(2).BarWidth = 0.6;
+bH(1).FaceColor = [0 0.4 0.8];
+bH(2).FaceColor = [1 0.75 0.05]; % 0.2 0.8 0.8
+bH2 = bar(target_idx,homogeneous_price);
+bH2(1).BarWidth = 0.6;
+bH2(1).BarWidth = 0.6;
+for ii = bH2
+    ii.FaceColor = [0.95 0.25 0.05];
+    ii.EdgeColor = [0 0 0];
+end
+for ii = bH
+    ii.EdgeColor = [0 0 0];
+end
+hold off
+xlabel('seller index','FontSize',12)
+ylabel("Buyer 4's price ("+char(0162)+"/kWh)",'FontSize',12)
+leg1 = legend([bH, bH2(2)],{'$\lambda^s_{ij}$', "$u_{ij}$",'$\lambda^b_{ij}-u_{ij}$'});
+set(leg1,'Interpreter','latex','FontSize',24)
+set(gca,'FontSize',24)
+xticks(target_idx)
+ylim([0 10])
+yticks([0 2 4 6 8 10])
+xlim([1.5 4.5])
 grid on
 set(gca,'Gridcolor',[0.9 0.9 0.9],'GridAlpha',1)
 
@@ -149,7 +192,7 @@ physics_energy = blkdiag(0,agents.Ab*ADMM.energy*agents.As');
 physics_price = blkdiag(0,agents.Ab*grid_price*agents.As');
 for j=1:no
     for i=1:no
-        if physics_energy(j,i)~=0
+        if physics_energy(j,i)>=10
             if physics_price(j,i) > 1e-3
                 G2 = addedge(G2,i, j,physics_energy(j,i));
             elseif physics_price(j,i) < -1e-3
@@ -162,23 +205,23 @@ for j=1:no
 end
 if ~isempty(G1.Edges)
 G1LWidths =G1.Edges.Weight/12;
-p1 = plot(G1,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[0.5, 0.5, 0.5],'LineWidth',G1LWidths);
+p1 = plot(G1,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[0.5, 0.5, 0.5],'LineWidth',G1LWidths,'EdgeAlpha',0.5);
 p1.ArrowSize = 10;
 end
 if ~isempty(G2.Edges)
 G2LWidths =G2.Edges.Weight/12;
-p2 = plot(G2,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[0.3, 0.75, 1],'LineWidth',G2LWidths);
+p2 = plot(G2,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[0.3, 0.75, 1],'LineWidth',G2LWidths,'EdgeAlpha',0.5);
 p2.ArrowSize = 10;
 end
 if ~isempty(G3.Edges)
 G3LWidths =G3.Edges.Weight/12;
-p3 = plot(G3,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[1, 0.75, 0],'LineWidth',G3LWidths);
+p3 = plot(G3,'XData',mpc.XY_data(:,2),'YData',mpc.XY_data(:,3),'EdgeColor',[1, 0.75, 0],'LineWidth',G3LWidths,'EdgeAlpha',0.5);
 % ,'EdgeAlpha',1
 p3.ArrowSize = 10;
 end
 p3.NodeColor = 'k';
-highlight(p3,[sellers.bus],'NodeColor',[70 114 196]/255)
-highlight(p3,[buyers.bus],'NodeColor',[237 125 49]/255)
+% highlight(p3,[sellers.bus],'NodeColor',[70 114 196]/255)
+% highlight(p3,[buyers.bus],'NodeColor',[237 125 49]/255)
 
 p.NodeLabel = {};
 p1.NodeLabel = {};
@@ -188,7 +231,7 @@ hold off
 set(gca, 'Ydir', 'reverse')
 set(gca,'xtick',[])
 set(gca,'ytick',[])
-set(f6,'Position',[0 0 1000 300])
+set(f6,'Position',[0 0 1000 250])
 
 % f7 = figure(7);
 % 

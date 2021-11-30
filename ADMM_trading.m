@@ -37,10 +37,10 @@ vd_low = zeros(length(no-1),1);
 vd_upp = zeros(length(no-1),1);
 %% market PTDFs
 MarketPTDF = [];
+ISF = makePTDF(mpc,1); % matpower package support injection shift factor
+ISF(:,1) = []; % reduced first column corresponding slack bus
 
 if const.activate_Linelimit == true
-    ISF = makePTDF(mpc,1); % matpower package support injection shift factor
-    ISF(:,1) = []; % reduced first column corresponding slack bus
     sell_ISF = ISF*agents.As;
     buy_ISF = ISF*agents.Ab;
     for i=1:length(sellers)
@@ -65,20 +65,17 @@ if const.activate_Voltagelimit == true
 end
 MarketMVSC = MarketMVSC/1e3; % convert kW to MW
 %% market MLSFs
-VM = pfresult.bus(2:end,8); % except slack bus
-VA = pfresult.bus(2:end,9)*pi/180;
-alpha = zeros(no-1,no-1);
-beta = zeros(no-1,no-1);
-for i = 1:no-1
-    for j = 1:no-1
-        alpha(i,j) = real(Zbus(i,j))/(VM(i)*VM(j))*cos(VA(i)-VA(j));
-        beta(i,j) = real(Zbus(i,j))/(VM(i)*VM(j))*sin(VA(i)-VA(j));
+
+LSF = zeros(no-1,1);
+for i=1:no-1
+    for l=1:32
+        LSF(i) = LSF(i) + 2*pfresult.branch(l,3)*pfresult.branch(l,14)*sum(ISF(l,i))/100;
     end
 end
-LSF = 2*((alpha*(-pfresult.bus(2:end,3))-beta*(-pfresult.bus(2:end,4))))/mpc.baseMVA;
-
 MLSFji = LSF'*agents.As - (LSF'*agents.Ab)';
-cij_vec = 8*MLSFji(incidence);
+cij_vec = MLSFji(incidence);
+cij_vec(cij_vec>0) = 7 * cij_vec(cij_vec>0); % retail price
+cij_vec(cij_vec<0) = 3 * cij_vec(cij_vec<0); % fit price
 
 if const.activate_Loss == false % if not activate loss, set to zeros
     cij_vec = zeros(size(cij_vec));
@@ -108,8 +105,6 @@ for round=1:1
     epsilon_pri = 1;    % primal residual
     epsilon_dual = 1;   % dual residual
     zglob_prev = 0;     % initialize previous global variable values
-    pifl = zeros(tradelen,1);
-    pivb = zeros(tradelen,1);
     
     while (epsilon_pri > 1e-4) || (epsilon_dual > 1e-4)
         % local variable (amount) update for sellers
@@ -134,24 +129,10 @@ for round=1:1
         
         % global energy variable (amount) update
         if const.activate_Linelimit == true || const.activate_Voltagelimit == true
-            ehat = Eaverage_vec+(Lambda_barvec-cij_vec/2-pifl/2-pivb/2)./rho;
-            
-            if const.activate_Linelimit == true
-                fl = Pline_fix+MarketPTDF*Eaverage_vec;
-                fd_upp = max(0,fd_upp+1000*(fl-const.Linelimit));
-                fd_low = max(0,fd_low+1000*(-const.Linelimit-fl));
-                pifl = MarketPTDF'*fd_upp-MarketPTDF'*fd_low;
-            end
-            if const.activate_Voltagelimit == true
-                vb = V_fix(2:end)+MarketMVSC*Eaverage_vec;
-                vd_upp = max(0,vd_upp+100000*(vb-const.Vmax));
-                vd_low = max(0,vd_low+100000*(-vb+const.Vmin));
-                pivb = MarketMVSC'*vd_upp-MarketMVSC'*vd_low;
-            end
+            ehat = Eaverage_vec+(Lambda_barvec-cij_vec/2)./rho;
             model.obj = -2*Eaverage_vec+(-2*Lambda_barvec+cij_vec)./rho;
             results = gurobi(model, params);
             z = results.x;
-            %             z = ehat;
             zglob(incidence) = z;
         elseif const.activate_Loss == true
             ehat = Eaverage_vec+(Lambda_barvec-cij_vec/2)./rho;
@@ -179,9 +160,8 @@ for round=1:1
         hist(k).dual = epsilon_dual;
         k=k+1;
     end
-        ADMM_graph_result(hist, k, MLSFji)
+    ADMM_graph_result(hist, k)
     % derive utility of overall market players
-    utility = 0;
     utility = 0;
     for j=1:length(buyers)
         utility = utility + (buyers(j).coeff.B*sum(Eb(j,:))-buyers(j).coeff.A*sum(Eb(j,:))^2);
@@ -189,9 +169,9 @@ for round=1:1
     for i=1:length(sellers)
         utility = utility - (sellers(i).coeff.B*sum(Es(:,i))+sellers(i).coeff.A*sum(Es(:,i))^2);
     end
-    Ploss = sum(MLSFji.*(Eaverage),'all');
-    pi_loss_fees = sum(cij_vec'*Eaverage_vec,'all');
-    network_fees = sum((Lambda_b-Lambda_s).*(Es),'all');
+    Ploss = sum(MLSFji.*(Eaverage),'all'); % kW
+    pi_loss_fees = sum(cij_vec'*Eaverage_vec,'all'); % cents
+    network_fees = sum((Lambda_b-Lambda_s).*(Es),'all'); % cents
 end
 end
 

@@ -20,6 +20,7 @@ for i = 1:no-1
     end
 end
 LSF = 2*((alpha*(-pfresult.bus(2:end,3))-beta*(-pfresult.bus(2:end,4))))/mpc.baseMVA;
+MLSFji = LSF'*agents.As - (LSF'*agents.Ab)';
 
 %% Optimal Power Flow problem
 %--------------------------------------------------------------------------
@@ -27,6 +28,11 @@ incidence = zeros(length(sellers),length(buyers));
 for i = 1:length(sellers)
     incidence(i,sellers(i).partner)=1;
 end
+cij_vec = MLSFji(:);
+cij_vec(cij_vec>0) = 7 * cij_vec(cij_vec>0);
+cij_vec(cij_vec<0) = 3 * cij_vec(cij_vec<0);
+
+
 [f, qf, A, b, Aeq, beq, ub, lb] = deal([]); % initialization
 
 pos.sell_trade = [0,size(sellers,2)];
@@ -51,12 +57,10 @@ end
 for j=1:size(buyers,2)
     f(pos.buy_trade(1)+j) = -buyers(j).coeff.B;
 end
+
 if const.activate_Loss == true
-for i=1:size(sellers,2)
-    f(pos.sell_trade(1)+i) = f(pos.sell_trade(1)+i)+8*LSF(sellers(i).bus-1);
-end
-for j=1:size(buyers,2)
-    f(pos.buy_trade(1)+j) = f(pos.buy_trade(1)+j)-8*LSF(buyers(j).bus-1);
+for i=1:size(sellers,2)*size(buyers,2)
+    f(pos.bilateral_trade(1)+i) = f(pos.bilateral_trade(1)+i)+cij_vec(i);
 end
 end
 
