@@ -1,5 +1,7 @@
 # ADMM_p2ptrade
 
+Supplementary code for "Security-Constrained P2P Energy Trading Strategy via Priced-Based Regularization of ADMM in a Distribution Network"
+
 ### About
 
 ## Prerequisites
